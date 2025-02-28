@@ -218,11 +218,44 @@ def main():
 
     try:
         # gets and cache stock data
-        if st.session_state.stock_data.empty:
-            st.session_state.stock_data = get_stock_data(
-                st.secrets["stock_api_key"],
-                st.session_state.current_symbol
-            )
+        use_example_data = st.sidebar.checkbox("Use Example Stock Data", 
+                                               help="Use pre-loaded example data if API limit is reached")
+
+        if use_example_data:
+            try:
+                df = pd.read_csv('data/stock_data.csv')
+                df['date'] = pd.to_datetime(df['date'])
+                df = df.sort_values('date', ascending=True)
+                
+                # Display a warning that example data is being used
+                st.warning("Using example stock data from local CSV file.")
+                st.session_state.stock_data = df
+            except Exception as e:
+                st.error(f"Error loading example data: {e}")
+                return
+        else:
+            if st.session_state.stock_data.empty:
+                try:
+                    st.session_state.stock_data = get_stock_data(
+                        st.secrets["stock_api_key"],
+                        st.session_state.current_symbol
+                    )
+                except Exception as e:
+                    st.error("FMP API limit (250 requests per day) reached")
+                    use_example_data = st.sidebar.checkbox("Use Example Stock Data", 
+                                                           help="Use pre-loaded example data if API limit is reached")
+                    if use_example_data:
+                        try:
+                            df = pd.read_csv('data/stock_data.csv')
+                            df['date'] = pd.to_datetime(df['date'])
+                            df = df.sort_values('date', ascending=True)
+                            
+                            # Display a warning that example data is being used
+                            st.warning("Using example stock data from local CSV file.")
+                            st.session_state.stock_data = df
+                        except Exception as load_error:
+                            st.error(f"Error loading example data: {load_error}")
+                    return
 
         # sidebar 
         handle_stock_selection()
@@ -249,8 +282,7 @@ def main():
 
     except Exception as e:
         # logging.error(f"Application error: {str(e)}")
-        st.error("FMP API limit (250 requests per day) reached. Try again tomorrow.")
-
+        st.error("Try again tomorrow or use example data.")
 
 if __name__ == "__main__":
     main()

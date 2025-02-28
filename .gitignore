@@ -49,3 +49,4 @@ api_2.py
 *.bak
 *.tmp
 *~
+.history
